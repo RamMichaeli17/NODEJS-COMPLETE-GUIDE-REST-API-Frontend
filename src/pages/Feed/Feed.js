@@ -112,7 +112,7 @@ class Feed extends Component {
     }
     const graphqlQuery = {
       query: `
-        query FetchPosts($page: Int){
+        query FetchPosts($page: Int) {
           posts(page: $page) {
             posts {
               _id
@@ -145,7 +145,7 @@ class Feed extends Component {
       })
       .then((resData) => {
         if (resData.errors) {
-          throw new Error("Failed to fetch posts.");
+          throw new Error("Fetching posts failed!");
         }
         this.setState({
           posts: resData.data.posts.posts.map((post) => {
@@ -165,7 +165,7 @@ class Feed extends Component {
     event.preventDefault();
     const graphqlQuery = {
       query: `
-        mutation UpdateUserStatus($status: String!){
+        mutation UpdateUserStatus($userStatus: String!) {
           updateStatus(status: $userStatus) {
             status
           }
@@ -233,11 +233,11 @@ class Feed extends Component {
     })
       .then((res) => res.json())
       .then((fileResData) => {
-        const imageUrl = (fileResData.filePath.replace("\\", "/")) || "undefined";
+        const imageUrl = fileResData.filePath? fileResData.filePath.replace("\\", "/") : "undefined";
         let graphqlQuery = {
           query: `
-          mutation CreatePost($title: String!, $content: String!, $imageUrl: String!){
-            createPost(postInput: {title: $title, content: $content, imageUrl:$imageUrl}) {
+          mutation CreateNewPost($title: String!, $content: String!, $imageUrl: String!) {
+            createPost(postInput: {title: $title, content: $content, imageUrl: $imageUrl}) {
               _id
               title
               content
@@ -259,21 +259,21 @@ class Feed extends Component {
         if (this.state.editPost) {
           graphqlQuery = {
             query: `
-            mutation UpdatePost($id: ID!, $title: String!, $content: String!, $imageUrl: String!){
-              updatePost(id: $id, postInput: {title: $title, content: $content, imageUrl: $imageUrl})
-                _id
-                title
-                content
-                imageUrl
-                creator {
-                  name
+              mutation UpdateExistingPost($postId: ID!, $title: String!, $content: String!, $imageUrl: String!) {
+                updatePost(id: $postId, postInput: {title: $title, content: $content, imageUrl: $imageUrl}) {
+                  _id
+                  title
+                  content
+                  imageUrl
+                  creator {
+                    name
+                  }
+                  createdAt
                 }
-                createdAt
               }
-            }
-          `,
+            `,
             variables: {
-              id: this.state.editPost._id,
+              postId: this.state.editPost._id,
               title: postData.title,
               content: postData.content,
               imageUrl: imageUrl,
@@ -317,12 +317,14 @@ class Feed extends Component {
         };
         this.setState((prevState) => {
           let updatedPosts = [...prevState.posts];
+          let updatedTotalPosts = prevState.totalPosts;
           if (prevState.editPost) {
             const postIndex = prevState.posts.findIndex(
               (p) => p._id === prevState.editPost._id
             );
             updatedPosts[postIndex] = post;
           } else {
+            updatedTotalPosts++;
             if (prevState.posts.length >= 2) {
               updatedPosts.pop();
             }
@@ -333,6 +335,7 @@ class Feed extends Component {
             isEditing: false,
             editPost: null,
             editLoading: false,
+            totalPosts: updatedTotalPosts,
           };
         });
         // this.setState((prevState) => {
@@ -396,8 +399,8 @@ class Feed extends Component {
         }
         console.log(resData);
         this.loadPosts();
-        // this.setState((prevState) => {
-        //   const updatedPosts = prevState.posts.filter((p) => p._id !== postId);
+        // this.setState(prevState => {
+        //   const updatedPosts = prevState.posts.filter(p => p._id !== postId);
         //   return { posts: updatedPosts, postsLoading: false };
         // });
       })
