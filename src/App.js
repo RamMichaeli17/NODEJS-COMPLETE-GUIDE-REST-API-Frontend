@@ -58,7 +58,6 @@ class App extends Component {
 
   loginHandler = (event, authData) => {
     event.preventDefault();
-    this.setState({ authLoading: true });
     const graphqlQuery = {
       query: `
         {
@@ -69,6 +68,7 @@ class App extends Component {
         }
       `,
     };
+    this.setState({ authLoading: true });
     fetch("http://localhost:8080/graphql", {
       method: "POST",
       headers: {
