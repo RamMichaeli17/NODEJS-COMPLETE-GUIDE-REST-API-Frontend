@@ -1,7 +1,6 @@
 import React, { Component } from "react";
-
-import Image from "../../../components/Image/Image";
 import "./SinglePost.css";
+import Image from "../../../components/Image/Image";
 
 class SinglePost extends Component {
   state = {
@@ -14,7 +13,8 @@ class SinglePost extends Component {
 
   componentDidMount() {
     const postId = this.props.match.params.postId;
-    fetch("https://nodejs-complete-guide-rest-api-deployment.onrender.com/feed/post/" + postId, {
+    const API_BASE_URL = process.env.REACT_APP_API_BASE_URL; 
+    fetch(`${API_BASE_URL}/feed/post/${postId}`, {
       headers: {
         Authorization: "Bearer " + this.props.token,
       },
@@ -29,7 +29,7 @@ class SinglePost extends Component {
         this.setState({
           title: resData.post.title,
           author: resData.post.creator.name,
-          image: "https://nodejs-complete-guide-rest-api-deployment.onrender.com/" + resData.post.imageUrl,
+          image: resData.post.imageUrl,
           date: new Date(resData.post.createdAt).toLocaleDateString("en-US"),
           content: resData.post.content,
         });

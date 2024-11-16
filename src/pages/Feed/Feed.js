@@ -1,6 +1,5 @@
 import React, { Component, Fragment } from "react";
 import openSocket from "socket.io-client";
-
 import Post from "../../components/Feed/Post/Post";
 import Button from "../../components/Button/Button";
 import FeedEdit from "../../components/Feed/FeedEdit/FeedEdit";
@@ -9,6 +8,8 @@ import Paginator from "../../components/Paginator/Paginator";
 import Loader from "../../components/Loader/Loader";
 import ErrorHandler from "../../components/ErrorHandler/ErrorHandler";
 import "./Feed.css";
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 class Feed extends Component {
   state = {
@@ -23,7 +24,7 @@ class Feed extends Component {
   };
 
   componentDidMount() {
-    fetch("https://nodejs-complete-guide-rest-api-deployment.onrender.com/auth/status", {
+    fetch(`${API_BASE_URL}/auth/status`, {
       headers: {
         Authorization: "Bearer " + this.props.token,
       },
@@ -40,8 +41,8 @@ class Feed extends Component {
       .catch(this.catchError);
 
     this.loadPosts();
-    // openSocket("https://nodejs-complete-guide-rest-api-deployment.onrender.com");
-    const socket = openSocket("https://nodejs-complete-guide-rest-api-deployment.onrender.com", {
+    // openSocket(`${API_BASE_URL}`);
+    const socket = openSocket(`${API_BASE_URL}`, {
       transports: ["websocket"],
     });
     socket.on("posts", (data) => {
@@ -97,7 +98,7 @@ class Feed extends Component {
       page--;
       this.setState({ postPage: page });
     }
-    fetch("https://nodejs-complete-guide-rest-api-deployment.onrender.com/feed/posts?page=" + page, {
+    fetch(`${API_BASE_URL}/feed/posts?page=${page}`, {
       headers: {
         Authorization: "Bearer " + this.props.token,
       },
@@ -125,7 +126,7 @@ class Feed extends Component {
 
   statusUpdateHandler = (event) => {
     event.preventDefault();
-    fetch("https://nodejs-complete-guide-rest-api-deployment.onrender.com/auth/status", {
+    fetch(`${API_BASE_URL}/auth/status`, {
       method: "PATCH",
       headers: {
         Authorization: "Bearer " + this.props.token,
@@ -174,10 +175,10 @@ class Feed extends Component {
     formData.append("title", postData.title);
     formData.append("content", postData.content);
     formData.append("image", postData.image);
-    let url = "https://nodejs-complete-guide-rest-api-deployment.onrender.com/feed/post";
+    let url = `${API_BASE_URL}/feed/post`;
     let method = "POST";
     if (this.state.editPost) {
-      url = "https://nodejs-complete-guide-rest-api-deployment.onrender.com/feed/post/" + this.state.editPost._id;
+      url = `${API_BASE_URL}/feed/post/${this.state.editPost._id}`;
       method = "PUT";
     }
 
@@ -239,7 +240,7 @@ class Feed extends Component {
 
   deletePostHandler = (postId) => {
     this.setState({ postsLoading: true });
-    fetch("https://nodejs-complete-guide-rest-api-deployment.onrender.com/feed/post/" + postId, {
+    fetch(`${API_BASE_URL}/feed/post/${postId}`, {
       method: "DELETE",
       headers: {
         Authorization: "Bearer " + this.props.token,
