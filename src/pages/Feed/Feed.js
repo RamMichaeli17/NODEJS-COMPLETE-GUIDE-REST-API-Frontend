@@ -1,5 +1,5 @@
 import React, { Component, Fragment } from "react";
-
+import openSocket from "socket.io-client";
 import Post from "../../components/Feed/Post/Post";
 import Button from "../../components/Button/Button";
 import FeedEdit from "../../components/Feed/FeedEdit/FeedEdit";
@@ -8,6 +8,8 @@ import Paginator from "../../components/Paginator/Paginator";
 import Loader from "../../components/Loader/Loader";
 import ErrorHandler from "../../components/ErrorHandler/ErrorHandler";
 import "./Feed.css";
+
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 class Feed extends Component {
   state = {
@@ -22,7 +24,7 @@ class Feed extends Component {
   };
 
   componentDidMount() {
-    fetch("http://localhost:8080/auth/status", {
+    fetch(`${API_BASE_URL}/auth/status`, {
       headers: {
         Authorization: "Bearer " + this.props.token,
       },
@@ -39,7 +41,49 @@ class Feed extends Component {
       .catch(this.catchError);
 
     this.loadPosts();
+    // openSocket(`${API_BASE_URL}`);
+    const socket = openSocket(`${API_BASE_URL}`, {
+      transports: ["websocket"],
+    });
+    socket.on("posts", (data) => {
+      if (data.action === "create") {
+        this.addPost(data.post);
+      } else if (data.action === "update") {
+        this.updatePost(data.post);
+      } else if (data.action === "delete") {
+        this.loadPosts();
+      }
+    });
   }
+
+  addPost = (post) => {
+    this.setState((prevState) => {
+      const updatedPosts = [...prevState.posts];
+      if (prevState.postPage === 1) {
+        if (updatedPosts.length >= 2) {
+          updatedPosts.pop();
+        }
+        updatedPosts.unshift(post);
+      }
+      return {
+        posts: updatedPosts,
+        totalPosts: prevState.totalPosts + 1,
+      };
+    });
+  };
+
+  updatePost = (post) => {
+    this.setState((prevState) => {
+      const updatedPosts = [...prevState.posts];
+      const postIndex = updatedPosts.findIndex((p) => p._id === post._id);
+      if (postIndex > -1) {
+        updatedPosts[postIndex] = post;
+      }
+      return {
+        posts: updatedPosts,
+      };
+    });
+  };
 
   loadPosts = (direction) => {
     if (direction) {
@@ -54,7 +98,7 @@ class Feed extends Component {
       page--;
       this.setState({ postPage: page });
     }
-    fetch("http://localhost:8080/feed/posts?page=" + page, {
+    fetch(`${API_BASE_URL}/feed/posts?page=${page}`, {
       headers: {
         Authorization: "Bearer " + this.props.token,
       },
@@ -82,7 +126,7 @@ class Feed extends Component {
 
   statusUpdateHandler = (event) => {
     event.preventDefault();
-    fetch("http://localhost:8080/auth/status", {
+    fetch(`${API_BASE_URL}/auth/status`, {
       method: "PATCH",
       headers: {
         Authorization: "Bearer " + this.props.token,
@@ -131,10 +175,10 @@ class Feed extends Component {
     formData.append("title", postData.title);
     formData.append("content", postData.content);
     formData.append("image", postData.image);
-    let url = "http://localhost:8080/feed/post";
+    let url = `${API_BASE_URL}/feed/post`;
     let method = "POST";
     if (this.state.editPost) {
-      url = "http://localhost:8080/feed/post/" + this.state.editPost._id;
+      url = `${API_BASE_URL}/feed/post/${this.state.editPost._id}`;
       method = "PUT";
     }
 
@@ -161,17 +205,18 @@ class Feed extends Component {
           createdAt: resData.post.createdAt,
         };
         this.setState((prevState) => {
-          let updatedPosts = [...prevState.posts];
-          if (prevState.editPost) {
-            const postIndex = prevState.posts.findIndex(
-              (p) => p._id === prevState.editPost._id
-            );
-            updatedPosts[postIndex] = post;
-          } else if (prevState.posts.length < 2) {
-            updatedPosts = prevState.posts.concat(post);
-          }
+          // let updatedPosts = [...prevState.posts];
+          // if (prevState.editPost) {
+          //   const postIndex = prevState.posts.findIndex(
+          //     (p) => p._id === prevState.editPost._id
+          //   );
+          //   updatedPosts[postIndex] = post;
+          // }
+          // else if (prevState.posts.length < 2) {
+          //   updatedPosts = prevState.posts.concat(post);
+          // }
           return {
-            posts: updatedPosts,
+            // posts: updatedPosts,
             isEditing: false,
             editPost: null,
             editLoading: false,
@@ -195,7 +240,7 @@ class Feed extends Component {
 
   deletePostHandler = (postId) => {
     this.setState({ postsLoading: true });
-    fetch("http://localhost:8080/feed/post/" + postId, {
+    fetch(`${API_BASE_URL}/feed/post/${postId}`, {
       method: "DELETE",
       headers: {
         Authorization: "Bearer " + this.props.token,
@@ -209,10 +254,11 @@ class Feed extends Component {
       })
       .then((resData) => {
         console.log(resData);
-        this.setState((prevState) => {
-          const updatedPosts = prevState.posts.filter((p) => p._id !== postId);
-          return { posts: updatedPosts, postsLoading: false };
-        });
+        this.loadPosts();
+        // this.setState((prevState) => {
+        //   const updatedPosts = prevState.posts.filter((p) => p._id !== postId);
+        //   return { posts: updatedPosts, postsLoading: false };
+        // });
       })
       .catch((err) => {
         console.log(err);
